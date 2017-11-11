@@ -91,24 +91,36 @@ module.exports = function(babel) {
    * @return {null}                   Instruments the code, no return value
    */
   function handleVariableDeclarator(varDeclarator, path) {
+    var rhs = varDeclarator.init;
     var lhsName = varDeclarator.id.name;
 
       //////////// Identifier ////////////
-    if (t.isIdentifier(varDeclarator.init)) {
-      var rhsTaint = getTaint(varDeclarator.init);
+    if (t.isIdentifier(rhs)) {
+      var rhsTaint = getTaint(rhs);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// Literal ////////////
-    } else if (t.isLiteral(varDeclarator.init)) {
+    } else if (t.isLiteral(rhs)) {
       // t.isLiteral is not a public method, but is a useful
       // undocumented function that tests for AST Literal nodes
-      var rhsTaint = getTaint(varDeclarator.init)
+      var rhsTaint = getTaint(rhs)
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// ArrayExpression ////////////
-    } else if (t.isArrayExpression(varDeclarator.init)) {
-      var arrElements = varDeclarator.init.elements;
+    } else if (t.isArrayExpression(rhs)) {
+      var arrElements = rhs.elements;
       var rhsTaint = chainBinaryOr(arrElements);
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// ObjectExpression ////////////
+    } else if (t.isObjectExpression(rhs)) {
+      // Extract all values of properties
+      var arrValues = [];
+      for (var i = 0; i < rhs.properties.length; i++) {
+        var property = rhs.properties[i];
+          arrValues.push(property.value);
+      }
+      var rhsTaint = chainBinaryOr(arrValues);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
   }
