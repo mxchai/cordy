@@ -1,5 +1,5 @@
 //////////// Helper functions ////////////
-function getTaintStatus() {
+function getTaint() {
   return 0;
 }
 
@@ -7,14 +7,21 @@ function getTaintStatus() {
 module.exports = function(babel) {
   var t = babel.types;
 
-  //////////// Helper functions ////////////
-  function createTaintStatusUpdate(path, declarator) {
+  /**
+   * createTaintStatusUpdate -
+   * helper function to create taintMap.<varName> = taint
+   *
+   * @param  {Path} path Path object from Babel
+   * @param  {String} varName
+   * @return {null} Instruments the code, no return value
+   */
+  function createTaintStatusUpdate(path, lhsName, rhsTaint) {
     var name = t.identifier(
-      declarator.id.name
+      lhsName
     );
 
     var tmId = t.identifier(
-      "taint_map"
+      "taintMap"
     );
 
     var tmExpression = t.MemberExpression(
@@ -26,7 +33,7 @@ module.exports = function(babel) {
       t.assignmentExpression(
         "=",
         tmExpression,
-        t.numericLiteral(0)
+        rhsTaint
       )
     );
     expr.isClean = true;
@@ -34,10 +41,28 @@ module.exports = function(babel) {
   }
 
   //////////// Instrumentation functions ////////////
-  function handleVariableDeclarator(declarator, path) {
-      if (t.isLiteral(declarator.init)) {
-        createTaintStatusUpdate(path, declarator);
-      }
+  function handleVariableDeclarator(varDeclarator, path) {
+    // varDeclarator is of AST type VariableDeclarator(id, init)
+    if (t.isIdentifier(varDeclarator.init)) {
+      var lhsName = varDeclarator.id.name;
+      var tmId = t.identifier("taintMap");
+      var rhsTaint = t.MemberExpression(
+        tmId,
+        t.identifier(varDeclarator.init.name)
+      );
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+    } else if (t.isLiteral(varDeclarator.init)) {
+      // t.isLiteral is not a public method, but is a useful
+      // undocumented function that tests for AST Literal nodes
+      var lhsName = varDeclarator.id.name;
+      var rhsTaint = t.numericLiteral(0)
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+    } else if (t.isArrayExpression) {
+
+      console.log("hola amigos!");
+    }
   }
 
   function instrumentVariableDeclaration(path) {
