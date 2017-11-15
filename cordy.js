@@ -63,9 +63,6 @@ module.exports = function(babel) {
    * @return {null}             Instruments the code, no return value
    */
   function createTaintStatusUpdate(path, lhsName, rhsTaint) {
-
-
-
     var name = t.identifier(
       lhsName
     );
@@ -104,15 +101,28 @@ module.exports = function(babel) {
 
       //////////// Identifier ////////////
     if (t.isIdentifier(rhs)) {
-      let scopeExists = path.scope.hasOwnBinding(rhs.name);
-      console.log("============ " + rhs.name);
-      console.log("============ " + scopeExists);
-      if (!scopeExists) {
-        scope = "";
+      let hasOwnBinding = path.scope.hasOwnBinding(rhs.name);
+      let hasBinding = path.scope.hasBinding(rhs.name);
+      let isLocalVar = isLocalVariableInBlockStatement(path, rhs.name);
+
+      let rhsIsParam = hasOwnBinding && !isLocalVar;
+      let rhsIsLocalVar = isLocalVar;
+      let rhsIsNotLocalNotParam = !rhsIsParam && !rhsIsLocalVar;
+
+      let rhsTaint = "";
+
+      if (rhsIsParam) {
+        rhsTaint = t.identifier(`taint_${rhs.name}`);
+      } else if (rhsIsLocalVar) {
+        let funcDeclaration = path.parentPath.parent;
+        scope = funcDeclaration.id.name;
+        rhsTaint = getTaint(rhs);
+      } else if (rhsIsNotLocalNotParam) {
+        scope = ""
+        rhsTaint = getTaint(rhs);
       }
-      var rhsTaint = getTaint(rhs);
+
       createTaintStatusUpdate(path, lhsName, rhsTaint);
-      scope = "asdasd";
 
       //////////// Literal ////////////
     } else if (t.isLiteral(rhs)) {
@@ -155,23 +165,34 @@ module.exports = function(babel) {
     }
   }
 
+  /**
+   * isLocalVariableInBlockStatement
+   *
+   * @param  {Path} path              Babel path object
+   * @param  {String} varName         Variable string name
+   * @return {Boolean}                Result of check
+   */
+  function isLocalVariableInBlockStatement(path, varName) {
+    let body = path.parent.body;
+    for (index in body) {
+      let node = body[index];
+      if (node.type === 'VariableDeclaration') {
+        // NOTE: this can only do one level deep
+        let name = node.declarations[0].id.name;
+        if (name === varName) return true
+      }
+    }
+    return false;
+  }
+
   function instrumentVariableDeclaration(path) {
     // Avoid infinite loop where Babel instruments newly added nodes
     if (path.node.isClean) { return; }
-
     // Handle each declarator
-    var arrLength = path.node.declarations.length;
-    for (var i = 0; i < arrLength; i++) {
-      var declarator = path.node.declarations[i];
-      // console.log(path.parent);
-      if (t.isBlockStatement(path.parent)) {
-        let funcDeclaration = path.parentPath.parent;
-        scope = funcDeclaration.id.name;
-        handleVariableDeclarator(declarator, path);
-        scope = "";
-      } else {
-        handleVariableDeclarator(declarator, path);
-      }
+    let arrLength = path.node.declarations.length;
+    for (let i = 0; i < arrLength; i++) {
+      let declarator = path.node.declarations[i];
+      handleVariableDeclarator(declarator, path);
     }
   }
 
