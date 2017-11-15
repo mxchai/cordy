@@ -111,13 +111,18 @@ module.exports = function(babel) {
 
       let rhsTaint = "";
 
-      if (rhsIsParam) {
-        rhsTaint = t.identifier(`taint_${rhs.name}`);
-      } else if (rhsIsLocalVar) {
-        let funcDeclaration = path.parentPath.parent;
-        scope = funcDeclaration.id.name;
-        rhsTaint = getTaint(rhs);
-      } else if (rhsIsNotLocalNotParam) {
+      if (t.isBlockStatement(path.parent)) {
+        if (rhsIsParam) {
+          rhsTaint = t.identifier(`taint_${rhs.name}`);
+        } else if (rhsIsLocalVar) {
+          let funcDeclaration = path.parentPath.parent;
+          scope = funcDeclaration.id.name;
+          rhsTaint = getTaint(rhs);
+        } else if (rhsIsNotLocalNotParam) {
+          scope = ""
+          rhsTaint = getTaint(rhs);
+        }
+      } else {
         scope = ""
         rhsTaint = getTaint(rhs);
       }
