@@ -96,8 +96,8 @@ module.exports = function(babel) {
    * @return {null}                   Instruments the code, no return value
    */
   function handleVariableDeclarator(varDeclarator, path) {
-    var rhs = varDeclarator.init;
-    var lhsName = varDeclarator.id.name;
+    let rhs = varDeclarator.init;
+    let lhsName = varDeclarator.id.name;
 
       //////////// Identifier ////////////
     if (t.isIdentifier(rhs)) {
@@ -128,36 +128,36 @@ module.exports = function(babel) {
     } else if (t.isLiteral(rhs)) {
       // t.isLiteral is not a public method, but is a useful
       // undocumented function that tests for AST Literal nodes
-      var rhsTaint = getTaint(rhs)
+      let rhsTaint = getTaint(rhs)
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// ArrayExpression ////////////
     } else if (t.isArrayExpression(rhs)) {
-      var arrElements = rhs.elements;
-      var rhsTaint = chainBinaryOr(arrElements);
+      let arrElements = rhs.elements;
+      let rhsTaint = chainBinaryOr(arrElements);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// ObjectExpression ////////////
     } else if (t.isObjectExpression(rhs)) {
       // Extract all values of properties
-      var arrValues = [];
-      for (var i = 0; i < rhs.properties.length; i++) {
-        var property = rhs.properties[i];
+      let arrValues = [];
+      for (let i = 0; i < rhs.properties.length; i++) {
+        let property = rhs.properties[i];
           arrValues.push(property.value);
       }
-      var rhsTaint = chainBinaryOr(arrValues);
+      let rhsTaint = chainBinaryOr(arrValues);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// CallExpression ////////////
     } else if (t.isCallExpression(rhs)) {
       // Add more arguments to a CallExpress e.g. taint.<arg>
-      var arrLength = rhs.arguments.length;
+      let arrLength = rhs.arguments.length;
       for (let i = 0; i < arrLength; i++) {
         rhs.arguments.push(getTaint(rhs.arguments[i]));
       }
       // Pardon the code duplication
-      var tmId = t.identifier("taintMap.function");
-      var rhsTaint = t.MemberExpression(
+      let tmId = t.identifier("taintMap.function");
+      let rhsTaint = t.MemberExpression(
         tmId,
         t.identifier(rhs.callee.name)
       );
@@ -214,11 +214,11 @@ module.exports = function(babel) {
 
   function instrumentFunctionDeclaration(path) {
     if (path.node.isClean) { return; }
-    var node = path.node;
+    let node = path.node;
 
     // hacky(path);
 
-    var arrLength = node.params.length;
+    let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
       node.params.push(t.Identifier("taint_" + node.params[i].name));
     }
