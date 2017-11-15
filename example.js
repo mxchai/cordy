@@ -16,3 +16,16 @@ function bye(c,d) {
 }
 
 var z = 20;
+
+function hey1(a) {
+  var param = a;
+}
+
+function hey2(f) {
+  var globally = a;
+}
+
+function hey3(f) {
+  var a = 90;
+  var local = a;
+}
