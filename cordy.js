@@ -35,8 +35,8 @@ module.exports = function(babel) {
    */
   function getTaint(node) {
     if (t.isIdentifier(node)) {
-      var tmId = scope ? t.identifier("taintMap." + scope) : t.identifier("taintMap");
-      var tmExpression = t.MemberExpression(
+      let tmId = scope ? t.identifier("taint." + scope) : t.identifier("taint");
+      let tmExpression = t.MemberExpression(
         tmId,
         t.identifier(node.name)
       );
@@ -44,7 +44,7 @@ module.exports = function(babel) {
     } else if (t.isLiteral(node)) {
       return t.numericLiteral(0);
     } else if (t.isCallExpression(node)) {
-      // TODO: just return taintMap.function.<function name>
+      // TODO: just return taint.fn.<function name>
       console.log("call expression :(");
     } else if (t.isMemberExpression(node)) {
       console.log("member expression :(");
@@ -55,7 +55,7 @@ module.exports = function(babel) {
 
   /**
    * createTaintStatusUpdate -
-   * helper function to create taintMap.<varName> = taint
+   * helper function to create taint.<varName> = taint
    *
    * @param  {Path} path        Path object from Babel
    * @param  {String} lhsName
@@ -63,20 +63,20 @@ module.exports = function(babel) {
    * @return {null}             Instruments the code, no return value
    */
   function createTaintStatusUpdate(path, lhsName, rhsTaint) {
-    var name = t.identifier(
+    let name = t.identifier(
       lhsName
     );
 
-    var tmId = t.identifier(
-      scope ? "taintMap." + scope : "taintMap"
+    let tmId = t.identifier(
+      scope ? "taint." + scope : "taint"
     );
 
-    var tmExpression = t.MemberExpression(
+    let tmExpression = t.MemberExpression(
       tmId,
       name
     )
 
-    var expr = t.expressionStatement(
+    let expr = t.expressionStatement(
       t.assignmentExpression(
         "=",
         tmExpression,
@@ -156,7 +156,7 @@ module.exports = function(babel) {
         rhs.arguments.push(getTaint(rhs.arguments[i]));
       }
       // Pardon the code duplication
-      let tmId = t.identifier("taintMap.function");
+      let tmId = t.identifier("taint.fn");
       let rhsTaint = t.MemberExpression(
         tmId,
         t.identifier(rhs.callee.name)
