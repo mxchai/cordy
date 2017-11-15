@@ -2,6 +2,7 @@
 module.exports = function(babel) {
   var t = babel.types;
   var scope = "";
+  var lhsScope = "";
 
   function handleExpression(expression) {
     return 0;
@@ -68,7 +69,7 @@ module.exports = function(babel) {
     );
 
     let tmId = t.identifier(
-      scope ? "taint." + scope : "taint"
+      lhsScope ? "taint." + lhsScope : (scope ? "taint." + scope : "taint")
     );
 
     let tmExpression = t.MemberExpression(
@@ -119,15 +120,15 @@ module.exports = function(babel) {
           scope = funcDeclaration.id.name;
           rhsTaint = getTaint(rhs);
         } else if (rhsIsNotLocalNotParam) {
-          scope = ""
+          scope = "";
           rhsTaint = getTaint(rhs);
         }
       } else {
-        scope = ""
+        scope = "";
         rhsTaint = getTaint(rhs);
       }
-
       createTaintStatusUpdate(path, lhsName, rhsTaint);
+      scope = "";
 
       //////////// Literal ////////////
     } else if (t.isLiteral(rhs)) {
@@ -197,7 +198,14 @@ module.exports = function(babel) {
     let arrLength = path.node.declarations.length;
     for (let i = 0; i < arrLength; i++) {
       let declarator = path.node.declarations[i];
-      handleVariableDeclarator(declarator, path);
+      if (t.isBlockStatement(path.parent)) {
+        let funcDeclaration = path.parentPath.parent;
+        lhsScope = funcDeclaration.id.name;
+        handleVariableDeclarator(declarator, path);
+        lhsScope = "";
+      } else {
+        handleVariableDeclarator(declarator, path);
+      }
     }
   }
 
