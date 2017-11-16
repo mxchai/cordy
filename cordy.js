@@ -37,6 +37,7 @@ module.exports = function(babel) {
    * @return {type}      taint expression of node
    */
   function getTaint(node, path) {
+    //////////////////////// isIdentifier /////////////////////////
     if (t.isIdentifier(node)) {
       let hasOwnBinding = path.scope.hasOwnBinding(node.name);
       let hasBinding = path.scope.hasBinding(node.name);
@@ -64,8 +65,12 @@ module.exports = function(babel) {
         t.identifier(node.name)
       );
       return tmExpression;
+
+      ///////////////////////// isLiteral //////////////////////////
     } else if (t.isLiteral(node)) {
       return t.numericLiteral(0);
+
+      ////////////////////// isCallExpression /////////////////////
     } else if (t.isCallExpression(node)) {
       let tmId = t.identifier("taint.fn");
       let rhsTaint = t.MemberExpression(
@@ -73,6 +78,8 @@ module.exports = function(babel) {
         t.identifier(node.callee.name)
       );
       return rhsTaint
+
+      //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
       let name = node.object.name;
       let tmId = t.identifier("taint");
@@ -81,8 +88,12 @@ module.exports = function(babel) {
         t.identifier(name)
       );
       return rhsTaint;
+
+      ///////////////////// isBinaryExpression ////////////////////
     } else if (t.isBinaryExpression(node) || t.isLogicalExpression(node)) {
       return chainBinaryExprVar(node, path);
+
+      ////////////////// Return untainted otherwise //////////////////
     } else {
         return 0;
     }
