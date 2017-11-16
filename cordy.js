@@ -242,7 +242,7 @@ module.exports = function(babel) {
   }
 
   function instrumentFunctionDeclaration(path) {
-    if (path.node.isClean) { return; }
+
     let node = path.node;
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
@@ -250,14 +250,39 @@ module.exports = function(babel) {
     }
   }
 
+  function instrumentReturnStatement(path) {
+    let arg = path.node.argument;
+    let retVarDeclarator = t.variableDeclarator(
+      t.identifier('__retVal'),
+      arg
+    )
+    let retVarDeclaration = t.variableDeclaration(
+      "var",
+      [retVarDeclarator]
+    )
+    path.insertBefore(retVarDeclaration);
+
+    let retStmt = t.returnStatement(
+      t.identifier('__retVal')
+    );
+    retStmt.isClean = true;
+    path.replaceWith(retStmt);
+  }
+
   //////////// Visitor pattern for instrumentation ////////////
   return {
     visitor: {
       VariableDeclaration: function(path) {
+        if (path.node.isClean) { return; }
         instrumentVariableDeclaration(path);
       },
       FunctionDeclaration: function(path) {
+        if (path.node.isClean) { return; }
         instrumentFunctionDeclaration(path);
+      },
+      ReturnStatement: function(path) {
+        if (path.node.isClean) { return; }
+        instrumentReturnStatement(path);
       }
     }
   };
