@@ -255,6 +255,18 @@ module.exports = function(babel) {
 
     let node = path.node;
     let functionName = node.id.name;
+    // Sets taint.fn.<function name> = 0 initially, in case
+    // a variable is assigned to a void function
+    let taintFnResultDefault = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        t.identifier(`taint.fn.${functionName}`),
+        t.objectExpression(
+          []
+        )
+      )
+    );
+    taintFnResultDefault.isClean = true;
     let taintFnNameExpression = t.expressionStatement(
       t.assignmentExpression(
         "=",
@@ -266,6 +278,7 @@ module.exports = function(babel) {
     );
     taintFnNameExpression.isClean = true;
     path.insertBefore(taintFnNameExpression);
+    path.insertBefore(taintFnResultDefault);
 
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
