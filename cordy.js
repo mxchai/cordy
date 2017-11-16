@@ -308,9 +308,7 @@ module.exports = function(babel) {
       t.assignmentExpression(
         "=",
         t.identifier(`taint.fn.${functionName}`),
-        t.objectExpression(
-          []
-        )
+        t.numericLiteral(0)
       )
     );
     taintFnResultDefault.isClean = true;
