@@ -143,16 +143,13 @@ module.exports = function(babel) {
 
   //////////// Instrumentation functions ////////////
   /**
-   * handleVariableDeclarator - dispatch method for VariableDeclarator
+   * handleVariable - dispatch method for VariableDeclarator
    *
-   * @param  {AST node} varDeclarator AST type VariableDeclarator(id, init)
-   * @param  {Path} path              Babel path object
+   * @param  {String} lhsName
+   * @param  {AST Expression} rhs
    * @return {null}                   Instruments the code, no return value
    */
-  function handleVariableDeclarator(varDeclarator, path) {
-    let rhs = varDeclarator.init;
-    let lhsName = varDeclarator.id.name;
-
+  function handleVariable(lhsName, rhs, path) {
       //////////// Identifier ////////////
     if (t.isIdentifier(rhs)) {
       let rhsTaint = getTaint(rhs, path);
@@ -234,7 +231,7 @@ module.exports = function(babel) {
       if (t.isBlockStatement(path.parent)) {
         let funcDeclaration = path.parentPath.parent;
         lhsScope = funcDeclaration.id.name;
-        handleVariableDeclarator(declarator, path);
+        handleVariable(declarator.id.name, declarator.init, path);
         lhsScope = "";
       } else {
         handleVariable(declarator.id.name, declarator.init, path);
