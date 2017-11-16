@@ -60,3 +60,6 @@ function createFile2() {
 
 var a = new Hello();
 var b = new Bye(1, x);
+
+var a = document.getElementById('hello');
+taint.a = 0;
