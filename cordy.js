@@ -335,10 +335,9 @@ module.exports = function(babel) {
             fnId,
             fnParams,
             fnBody
-          )
-          fnDeclaration.isClean = true;
+          );
           path.insertAfter(fnDeclaration);
-          newArgList.push(fnId)
+          newArgList.push(fnId);
         } else {
           newArgList.push(node);
         }
