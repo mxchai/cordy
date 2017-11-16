@@ -192,9 +192,13 @@ module.exports = function(babel) {
       }
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// MemberExpression ////////////
     } else if (t.isMemberExpression(rhs)) {
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// BinaryExpression ////////////
     } else if (t.isBinaryExpression(rhs)) {
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
@@ -233,23 +237,7 @@ module.exports = function(babel) {
         handleVariableDeclarator(declarator, path);
         lhsScope = "";
       } else {
-        handleVariableDeclarator(declarator, path);
-      }
-    }
-  }
-
-  function hacky(path) {
-    // Avoid infinite loop where Babel instruments newly added nodes
-    if (path.node.isClean) { return; }
-
-    // Handle each declarator within the functionBlock
-    let functionBlock = path.node.body;
-    let blockLength = functionBlock.length;
-
-    for (let i = 0; i < blockLength; i++) {
-      let statement = functionBlock[i];
-      if (isVariableDeclaration(statement)) {
-        handleVariableDeclarator(declarator, path);
+        handleVariable(declarator.id.name, declarator.init, path);
       }
     }
   }
@@ -257,9 +245,6 @@ module.exports = function(babel) {
   function instrumentFunctionDeclaration(path) {
     if (path.node.isClean) { return; }
     let node = path.node;
-
-    // hacky(path);
-
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
       node.params.push(t.Identifier("taint_" + node.params[i].name));
