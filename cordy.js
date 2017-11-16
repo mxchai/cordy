@@ -4,6 +4,7 @@ module.exports = function(babel) {
   var scope = "";
   var lhsScope = "";
   var anonymousCount = 0;
+  var taintedSources = ['textBox1'];
 
   function handleExpression(expression) {
     return 0;
@@ -199,13 +200,20 @@ module.exports = function(babel) {
 
       //////////// CallExpression ////////////
     } else if (t.isCallExpression(rhs)) {
-      // Add more arguments to a CallExpress e.g. taint.<arg>
-      let arrLength = rhs.arguments.length;
-      for (let i = 0; i < arrLength; i++) {
-        rhs.arguments.push(getTaint(rhs.arguments[i], path));
+      if (isDocumentGetElementById(rhs.callee)) {
+        let docSource = rhs.arguments[0].value;
+        let isTaintedSource = taintedSources.indexOf(docSource) > -1;
+        let rhsTaint = isTaintedSource ? t.numericLiteral(1) : t.numericLiteral(0);
+        createTaintStatusUpdate(path, lhsName, rhsTaint);
+      } else {
+        // Add more arguments to a CallExpress e.g. taint.<arg>
+        let arrLength = rhs.arguments.length;
+        for (let i = 0; i < arrLength; i++) {
+          rhs.arguments.push(getTaint(rhs.arguments[i], path));
+        }
+        let rhsTaint = getTaint(rhs, path);
+        createTaintStatusUpdate(path, lhsName, rhsTaint);
       }
-      let rhsTaint = getTaint(rhs, path);
-      createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// MemberExpression ////////////
     } else if (t.isMemberExpression(rhs)) {
@@ -248,6 +256,18 @@ module.exports = function(babel) {
       }
     }
     return false;
+  }
+
+  /**
+   * isDocumentGetElementById
+   *
+   * @param  {AST MemberExpression} node
+   * @return {Boolean}                Result of check
+   */
+  function isDocumentGetElementById(node) {
+    let memExprObject = node.object;
+    let memExprProperty = node.property;
+    return memExprObject.name === 'document' && memExprProperty.name === 'getElementById';
   }
 
   function instrumentVariableDeclaration(path) {
