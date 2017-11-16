@@ -290,6 +290,18 @@ module.exports = function(babel) {
       ]
     )
     taintDeclaration.isClean = true;
+
+    let taintFnDeclaration = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        t.identifier('taint.fn'),
+        t.objectExpression(
+          []
+        )
+      )
+    );
+    taintFnDeclaration.isClean = true;
+    path.unshiftContainer('body', taintFnDeclaration);
     path.unshiftContainer('body', taintDeclaration);
   }
 
