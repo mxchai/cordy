@@ -33,3 +33,19 @@ function hey3(f) {
   var a = 90;
   var local = a;
 }
+
+function hey(a,b) {
+  return a+b;
+}
+
+function hey1() {
+  return hey(1,2)
+}
+
+function hey2(a) {
+  return a;
+}
+
+function hey3(a,b) {
+  return a+b+hey(a,b);
+}

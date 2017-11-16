@@ -144,16 +144,15 @@ module.exports = function(babel) {
 
   //////////// Instrumentation functions ////////////
   /**
-   * handleVariableDeclarator - dispatch method for VariableDeclarator
+   * handleVariable - dispatch method for VariableDeclarator
    *
    * @param  {AST node} varDeclarator AST type VariableDeclarator(id, init)
    * @param  {Path} path              Babel path object
    * @return {null}                   Instruments the code, no return value
    */
   function handleVariableDeclarator(varDeclarator, path) {
-    let rhs = varDeclarator.init;
     let lhsName = varDeclarator.id.name;
-
+    let rhs = varDeclarator.init;
       //////////// Identifier ////////////
     if (t.isIdentifier(rhs)) {
       let rhsTaint = getTaint(rhs, path);
@@ -259,14 +258,39 @@ module.exports = function(babel) {
     }
   }
 
+  function instrumentReturnStatement(path) {
+    let arg = path.node.argument;
+    let retVarDeclarator = t.variableDeclarator(
+      t.identifier('__retVal'),
+      arg
+    )
+    let retVarDeclaration = t.variableDeclaration(
+      "var",
+      [retVarDeclarator]
+    )
+    path.insertBefore(retVarDeclaration);
+
+    let retStmt = t.returnStatement(
+      t.identifier('__retVal')
+    );
+    retStmt.isClean = true;
+    path.replaceWith(retStmt);
+  }
+
   //////////// Visitor pattern for instrumentation ////////////
   return {
     visitor: {
       VariableDeclaration: function(path) {
+        if (path.node.isClean) { return; }
         instrumentVariableDeclaration(path);
       },
       FunctionDeclaration: function(path) {
+        if (path.node.isClean) { return; }
         instrumentFunctionDeclaration(path);
+      },
+      ReturnStatement: function(path) {
+        if (path.node.isClean) { return; }
+        instrumentReturnStatement(path);
       }
     }
   };
