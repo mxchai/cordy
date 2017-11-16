@@ -77,9 +77,10 @@ Same logic as BinaryExpression. Uses the same code as well.
 ```
 var foo = a;
 foo = bar();
+
+getTaint(LHS) = getTaint(RHS)
 ```
-Not yet coded.
-I think can use the var declarator logic.
+Taint of LHS will be set to the taint of RHS.
 
 ## Propagation Policy: Statements and Declarations
 
@@ -87,6 +88,10 @@ I think can use the var declarator logic.
 Instrument every function that is declared and update them in the `taint.fn.<local variable>` map.
 
 `taint.fn` is an Object under our `taint` map, where `taint.fn.<function name>` will contain the taint properties of the variables declared within that function.
+
+To handle the scope of variables in function, we namespace each local variable within the function under `taint.<function name>.<var name>`.
+
+As for the return value, we store it in a newly created local variable and have the function return the local variable instead. By inserting the new variable node into the AST, the taint of the variable will be correctly determined when we are traversing the AST.
 
 ### VariableDeclaration
 Catch every VariableDeclaration and update the taint of LHS. Basically, everything described in the previous section, **Propagation Policy: Expression**, applies to VariableDeclaration.

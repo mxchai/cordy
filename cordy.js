@@ -255,6 +255,18 @@ module.exports = function(babel) {
 
     let node = path.node;
     let functionName = node.id.name;
+    // Sets taint.fn.<function name> = 0 initially, in case
+    // a variable is assigned to a void function
+    let taintFnResultDefault = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        t.identifier(`taint.fn.${functionName}`),
+        t.objectExpression(
+          []
+        )
+      )
+    );
+    taintFnResultDefault.isClean = true;
     let taintFnNameExpression = t.expressionStatement(
       t.assignmentExpression(
         "=",
@@ -266,6 +278,7 @@ module.exports = function(babel) {
     );
     taintFnNameExpression.isClean = true;
     path.insertBefore(taintFnNameExpression);
+    path.insertBefore(taintFnResultDefault);
 
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
@@ -354,10 +367,9 @@ module.exports = function(babel) {
             fnId,
             fnParams,
             fnBody
-          )
-          fnDeclaration.isClean = true;
+          );
           path.insertAfter(fnDeclaration);
-          newArgList.push(fnId)
+          newArgList.push(fnId);
         } else {
           newArgList.push(node);
         }
@@ -365,7 +377,20 @@ module.exports = function(babel) {
       path.node.expression.arguments = newArgList;
 
     } else if (t.isAssignmentExpression(path.node.expression)) {
-      console.log('isAssignmentExpression');
+      let node = path.node.expression;
+      // Assumption: LHS is always an Identifier
+      let lhsName = node.left.name;
+      let rhsTaint = getTaint(node.right, path);
+      // Handle AssignmentExpression within Functions
+      if (t.isBlockStatement(path.parent)) {
+        let funcDeclaration = path.parentPath.parent;
+        lhsScope = funcDeclaration.id.name;
+        createTaintStatusUpdate(path, lhsName, rhsTaint);
+        lhsScope = "";
+      } else {
+        lhsScope = "";
+        createTaintStatusUpdate(path, lhsName, rhsTaint);
+      }
     }
   }
 
