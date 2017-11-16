@@ -63,11 +63,13 @@ getTaint(LHS) = getTaint(operand1) OR getTaint(operand2)
 ```
 Taint is simply the OR of the two operands on the RHS.
 
+Note that an expression like `1 + 2 + 3` is just 2 BinaryExpression chained together like this: `((1 + 2) + 3))`.
+
 ### LogicalExpression
 ```
 getTaint(LHS) = getTaint(operand1) OR getTaint(operand2)
 ```
-Not yet coded, but the logic is exactly the same as BinaryExpression
+Same logic as BinaryExpression. Uses the same code as well.
 
 ### AssignmentExpression
 ```

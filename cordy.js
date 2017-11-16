@@ -8,7 +8,6 @@ module.exports = function(babel) {
     return 0;
   }
 
-
   /**
    * chainBinaryOr - Used in ArrayExpression to generate the
    * taint expression
@@ -81,7 +80,7 @@ module.exports = function(babel) {
         t.identifier(name)
       );
       return rhsTaint;
-    } else if (t.isBinaryExpression(node)) {
+    } else if (t.isBinaryExpression(node) || t.isLogicalExpression(node)) {
       return chainBinaryExprVar(node, path);
     } else {
         return 0;
@@ -89,15 +88,17 @@ module.exports = function(babel) {
   }
 
   /**
-   * chainBinaryExprVar
+   * chainBinaryExprVar. Recursive function because an
+   * expression like 1 + 2 + 3 is actually 2 BinaryExpressions
+   * that looks like ((1 + 2) + 3))
    *
-   * @param  {type} node BinaryExpression
+   * @param  {type} node BinaryExpression or LogicalExpression
    * @param  {Path} path Babel path object
    * @return {type}      taint expression of node
    */
   function chainBinaryExprVar(node, path) {
-    if (!t.isBinaryExpression(node)) {
-      return getTaint(node, path)
+    if (!t.isBinaryExpression(node) && !t.isLogicalExpression(node)) {
+      return getTaint(node, path);
     } else {
       return t.BinaryExpression(
         '|',
@@ -192,10 +193,14 @@ module.exports = function(babel) {
       }
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// MemberExpression ////////////
     } else if (t.isMemberExpression(rhs)) {
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
-    } else if (t.isBinaryExpression(rhs)) {
+
+      //////////// BinaryExpression and LogicalExpression ////////////
+    } else if (t.isBinaryExpression(rhs) || t.isLogicalExpression(rhs)) {
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
@@ -238,28 +243,9 @@ module.exports = function(babel) {
     }
   }
 
-  function hacky(path) {
-    // Avoid infinite loop where Babel instruments newly added nodes
-    if (path.node.isClean) { return; }
-
-    // Handle each declarator within the functionBlock
-    let functionBlock = path.node.body;
-    let blockLength = functionBlock.length;
-
-    for (let i = 0; i < blockLength; i++) {
-      let statement = functionBlock[i];
-      if (isVariableDeclaration(statement)) {
-        handleVariableDeclarator(declarator, path);
-      }
-    }
-  }
-
   function instrumentFunctionDeclaration(path) {
     if (path.node.isClean) { return; }
     let node = path.node;
-
-    // hacky(path);
-
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
       node.params.push(t.Identifier("taint_" + node.params[i].name));
