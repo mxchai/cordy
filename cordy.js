@@ -285,6 +285,25 @@ module.exports = function(babel) {
     )
     path.insertBefore(retVarDeclaration);
 
+    let fnName = path.parentPath.parent.id.name;
+    let lExpression = t.MemberExpression(
+      t.identifier('taint.fn'),
+      t.identifier(fnName)
+    );
+    let rExpression = t.MemberExpression(
+      t.identifier(`taint.${fnName}`),
+      t.identifier('__retVal')
+    );
+    let fnTaint = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        lExpression,
+        rExpression
+      )
+    )
+    fnTaint.isClean = true;
+    path.insertBefore(fnTaint);
+
     let retStmt = t.returnStatement(
       t.identifier('__retVal')
     );
