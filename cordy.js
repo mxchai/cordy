@@ -45,8 +45,12 @@ module.exports = function(babel) {
     } else if (t.isLiteral(node)) {
       return t.numericLiteral(0);
     } else if (t.isCallExpression(node)) {
-      // TODO: just return taint.fn.<function name>
-      console.log("call expression :(");
+      let tmId = t.identifier("taint.fn");
+      let rhsTaint = t.MemberExpression(
+        tmId,
+        t.identifier(node.callee.name)
+      );
+      return rhsTaint
     } else if (t.isMemberExpression(node)) {
       console.log("member expression :(");
     } else {
@@ -161,12 +165,7 @@ module.exports = function(babel) {
       for (let i = 0; i < arrLength; i++) {
         rhs.arguments.push(getTaint(rhs.arguments[i]));
       }
-      // Pardon the code duplication
-      let tmId = t.identifier("taint.fn");
-      let rhsTaint = t.MemberExpression(
-        tmId,
-        t.identifier(rhs.callee.name)
-      );
+      let rhsTaint = getTaint(rhs)
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
   }
