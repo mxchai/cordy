@@ -323,9 +323,21 @@ module.exports = function(babel) {
     if (t.isCallExpression(path.node.expression)) {
       console.log('isCallExpression');
     } else if (t.isAssignmentExpression(path.node.expression)) {
-      console.log('isAssignmentExpression');
+      let node = path.node.expression;
+      // Assumption: LHS is always an Identifier
+      let lhsName = node.left.name;
+      let rhsTaint = getTaint(node.right, path);
+      // Handle AssignmentExpression within Functions
+      if (t.isBlockStatement(path.parent)) {
+        let funcDeclaration = path.parentPath.parent;
+        lhsScope = funcDeclaration.id.name;
+        createTaintStatusUpdate(path, lhsName, rhsTaint);
+        lhsScope = "";
+      } else {
+        lhsScope = "";
+        createTaintStatusUpdate(path, lhsName, rhsTaint);
+      }
     }
-
   }
 
   //////////// Visitor pattern for instrumentation ////////////

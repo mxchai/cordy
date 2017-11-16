@@ -77,9 +77,10 @@ Same logic as BinaryExpression. Uses the same code as well.
 ```
 var foo = a;
 foo = bar();
+
+getTaint(LHS) = getTaint(RHS)
 ```
-Not yet coded.
-I think can use the var declarator logic.
+Taint of LHS will be set to the taint of RHS.
 
 ## Propagation Policy: Statements and Declarations
 
