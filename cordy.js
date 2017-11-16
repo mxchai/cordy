@@ -270,9 +270,29 @@ module.exports = function(babel) {
     path.replaceWith(retStmt);
   }
 
+  function instrumentProgram(path) {
+    let taintDeclaration = t.variableDeclaration(
+      "var",
+      [
+        t.variableDeclarator(
+          t.identifier('taint'),
+          t.objectExpression(
+            []
+          )
+        )
+      ]
+    )
+    taintDeclaration.isClean = true;
+    path.unshiftContainer('body', taintDeclaration);
+  }
+
   //////////// Visitor pattern for instrumentation ////////////
   return {
     visitor: {
+      Program: function(path) {
+        if (path.node.isClean) { return; }
+        instrumentProgram(path);
+      },
       VariableDeclaration: function(path) {
         if (path.node.isClean) { return; }
         instrumentVariableDeclaration(path);
