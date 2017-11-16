@@ -327,6 +327,7 @@ module.exports = function(babel) {
     path.insertBefore(taintFnNameExpression);
     path.insertBefore(taintFnResultDefault);
 
+    if (path.node.doNotAddTaintArgsToDeclaration) { return; } // don't add any taint_args as params to extracted anonymous functions
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
       node.params.push(t.Identifier("taint_" + node.params[i].name));
@@ -415,6 +416,7 @@ module.exports = function(babel) {
             fnParams,
             fnBody
           );
+          fnDeclaration.doNotAddTaintArgsToDeclaration = true; // don't add any taint_args as params to extracted anonymous functions
           path.insertAfter(fnDeclaration);
           newArgList.push(fnId);
         } else {
