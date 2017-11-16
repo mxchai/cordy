@@ -251,7 +251,21 @@ module.exports = function(babel) {
 
   function instrumentFunctionDeclaration(path) {
     if (path.node.isClean) { return; }
+
     let node = path.node;
+    let functionName = node.id.name;
+    let taintFnNameExpression = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        t.identifier(`taint.${functionName}`),
+        t.objectExpression(
+          []
+        )
+      )
+    );
+    taintFnNameExpression.isClean = true;
+    path.insertBefore(taintFnNameExpression);
+
     let arrLength = node.params.length;
     for (let i = 0; i < arrLength; i++) {
       node.params.push(t.Identifier("taint_" + node.params[i].name));
@@ -290,6 +304,18 @@ module.exports = function(babel) {
       ]
     )
     taintDeclaration.isClean = true;
+
+    let taintFnDeclaration = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        t.identifier('taint.fn'),
+        t.objectExpression(
+          []
+        )
+      )
+    );
+    taintFnDeclaration.isClean = true;
+    path.unshiftContainer('body', taintFnDeclaration);
     path.unshiftContainer('body', taintDeclaration);
   }
 
