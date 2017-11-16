@@ -3,6 +3,7 @@ var b = a;
 var c = [1,a,b];
 var d = {foo:1, bar:a, baz:"string"};
 var e = hey(a, b);
+var f = foo.bar
 
 function hey(a, b) {
   var e = a;

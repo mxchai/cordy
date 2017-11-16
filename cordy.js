@@ -52,7 +52,13 @@ module.exports = function(babel) {
       );
       return rhsTaint
     } else if (t.isMemberExpression(node)) {
-      console.log("member expression :(");
+      let name = node.object.name;
+      let tmId = t.identifier("taint");
+      let rhsTaint = t.MemberExpression(
+        tmId,
+        t.identifier(name)
+      );
+      return rhsTaint;
     } else {
         return 0;
     }
@@ -165,6 +171,9 @@ module.exports = function(babel) {
       for (let i = 0; i < arrLength; i++) {
         rhs.arguments.push(getTaint(rhs.arguments[i]));
       }
+      let rhsTaint = getTaint(rhs)
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
+    } else if (t.isMemberExpression(rhs)) {
       let rhsTaint = getTaint(rhs)
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
