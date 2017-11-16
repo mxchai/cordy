@@ -4,10 +4,13 @@ var c = [1,a,b];
 var d = {foo:1, bar:a, baz:"string"};
 var e = hey(a, b);
 var f = foo.bar
+var g = a+b+c;
 
 function hey(a, b) {
   var e = a;
   var f = [a,b,c];
+  var w = e+f+b;
+  var y = a+b;
   return d + b;
 }
 
