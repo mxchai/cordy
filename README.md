@@ -49,7 +49,9 @@ Apparently this appears when you declare a function callback within another func
 LHS = foo()
 getTaint(LHS) = getTaint(foo)
 ```
-CallExpression is a function call.
+CallExpression is a function call. We also instrument the CallExpression to include the taint of each argument as additional arguments to the CallExpression.
+
+The taint of the LHS will be the taint of the return result of the function.
 
 ### UnaryExpression
 ```
@@ -83,6 +85,8 @@ I think can use the var declarator logic.
 
 ### FunctionDeclaration
 Instrument every function that is declared and update them in the `taint.fn.<local variable>` map.
+
+`taint.fn` is an Object under our `taint` map, where `taint.fn.<function name>` will contain the taint properties of the variables declared within that function.
 
 ### VariableDeclaration
 Catch every VariableDeclaration and update the taint of LHS. Basically, everything described in the previous section, **Propagation Policy: Expression**, applies to VariableDeclaration.
