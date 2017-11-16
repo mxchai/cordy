@@ -14,16 +14,17 @@ module.exports = function(babel) {
    * taint expression
    *
    * @param  {type} arrElements ArrayExpression.init.elements
+   * @param  {Path} path        Babel path object
    * @return {type}             description
    */
-  function chainBinaryOr(arrElements) {
+  function chainBinaryOr(arrElements, path) {
     if (arrElements.length == 1) {
-      return getTaint(arrElements[0]);
+      return getTaint(arrElements[0], path);
     } else {
       return t.BinaryExpression(
         '|',
-        chainBinaryOr(arrElements.slice(0, arrElements.length - 1)),
-        chainBinaryOr(arrElements.slice(arrElements.length - 1))
+        chainBinaryOr(arrElements.slice(0, arrElements.length - 1), path),
+        chainBinaryOr(arrElements.slice(arrElements.length - 1), path)
       );
     }
   }
@@ -32,10 +33,31 @@ module.exports = function(babel) {
    * getTaint - returns the taint value of node
    *
    * @param  {type} node VariableDeclarator.init
+   * @param  {Path} path              Babel path object
    * @return {type}      taint expression of node
    */
-  function getTaint(node) {
+  function getTaint(node, path) {
     if (t.isIdentifier(node)) {
+      let hasOwnBinding = path.scope.hasOwnBinding(node.name);
+      let hasBinding = path.scope.hasBinding(node.name);
+      let isLocalVar = isLocalVariableInBlockStatement(path, node.name);
+
+      let nodeIsParam = hasOwnBinding && !isLocalVar;
+      let nodeIsLocalVar = isLocalVar;
+      let nodeIsNotLocalNotParam = !nodeIsParam && !nodeIsLocalVar;
+      if (t.isBlockStatement(path.parent)) {
+        if (nodeIsParam) {
+          return t.identifier(`taint_${node.name}`);
+
+        } else if (nodeIsLocalVar) {
+          let funcDeclaration = path.parentPath.parent;
+          scope = funcDeclaration.id.name;
+        } else if (nodeIsNotLocalNotParam) {
+          scope = "";
+        }
+      } else {
+        scope = "";
+      }
       let tmId = scope ? t.identifier("taint." + scope) : t.identifier("taint");
       let tmExpression = t.MemberExpression(
         tmId,
@@ -59,8 +81,29 @@ module.exports = function(babel) {
         t.identifier(name)
       );
       return rhsTaint;
+    } else if (t.isBinaryExpression(node)) {
+      return chainBinaryExprVar(node, path);
     } else {
         return 0;
+    }
+  }
+
+  /**
+   * chainBinaryExprVar
+   *
+   * @param  {type} node BinaryExpression
+   * @param  {Path} path Babel path object
+   * @return {type}      taint expression of node
+   */
+  function chainBinaryExprVar(node, path) {
+    if (!t.isBinaryExpression(node)) {
+      return getTaint(node, path)
+    } else {
+      return t.BinaryExpression(
+        '|',
+        chainBinaryExprVar(node.left, path),
+        chainBinaryExprVar(node.right, path)
+      )
     }
   }
 
@@ -112,31 +155,7 @@ module.exports = function(babel) {
 
       //////////// Identifier ////////////
     if (t.isIdentifier(rhs)) {
-      let hasOwnBinding = path.scope.hasOwnBinding(rhs.name);
-      let hasBinding = path.scope.hasBinding(rhs.name);
-      let isLocalVar = isLocalVariableInBlockStatement(path, rhs.name);
-
-      let rhsIsParam = hasOwnBinding && !isLocalVar;
-      let rhsIsLocalVar = isLocalVar;
-      let rhsIsNotLocalNotParam = !rhsIsParam && !rhsIsLocalVar;
-
-      let rhsTaint = "";
-
-      if (t.isBlockStatement(path.parent)) {
-        if (rhsIsParam) {
-          rhsTaint = t.identifier(`taint_${rhs.name}`);
-        } else if (rhsIsLocalVar) {
-          let funcDeclaration = path.parentPath.parent;
-          scope = funcDeclaration.id.name;
-          rhsTaint = getTaint(rhs);
-        } else if (rhsIsNotLocalNotParam) {
-          scope = "";
-          rhsTaint = getTaint(rhs);
-        }
-      } else {
-        scope = "";
-        rhsTaint = getTaint(rhs);
-      }
+      let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
       scope = "";
 
@@ -144,13 +163,13 @@ module.exports = function(babel) {
     } else if (t.isLiteral(rhs)) {
       // t.isLiteral is not a public method, but is a useful
       // undocumented function that tests for AST Literal nodes
-      let rhsTaint = getTaint(rhs)
+      let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// ArrayExpression ////////////
     } else if (t.isArrayExpression(rhs)) {
       let arrElements = rhs.elements;
-      let rhsTaint = chainBinaryOr(arrElements);
+      let rhsTaint = chainBinaryOr(arrElements, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// ObjectExpression ////////////
@@ -161,7 +180,7 @@ module.exports = function(babel) {
         let property = rhs.properties[i];
           arrValues.push(property.value);
       }
-      let rhsTaint = chainBinaryOr(arrValues);
+      let rhsTaint = chainBinaryOr(arrValues, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// CallExpression ////////////
@@ -169,12 +188,15 @@ module.exports = function(babel) {
       // Add more arguments to a CallExpress e.g. taint.<arg>
       let arrLength = rhs.arguments.length;
       for (let i = 0; i < arrLength; i++) {
-        rhs.arguments.push(getTaint(rhs.arguments[i]));
+        rhs.arguments.push(getTaint(rhs.arguments[i], path));
       }
-      let rhsTaint = getTaint(rhs)
+      let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     } else if (t.isMemberExpression(rhs)) {
-      let rhsTaint = getTaint(rhs)
+      let rhsTaint = getTaint(rhs, path);
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
+    } else if (t.isBinaryExpression(rhs)) {
+      let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
   }
@@ -191,7 +213,6 @@ module.exports = function(babel) {
     for (index in body) {
       let node = body[index];
       if (node.type === 'VariableDeclaration') {
-        // NOTE: this can only do one level deep
         let name = node.declarations[0].id.name;
         if (name === varName) return true
       }
