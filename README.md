@@ -55,7 +55,7 @@ CallExpression is a function call.
 ```
 getTaint(LHS) = getTaint(operand)
 ```
-Not yet coded.
+Taint will be that of the operand used in the UnaryExpression, because the unary operator will not affect the taint.
 
 ### BinaryExpression
 ```

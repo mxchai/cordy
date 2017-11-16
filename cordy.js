@@ -202,6 +202,13 @@ module.exports = function(babel) {
     } else if (t.isBinaryExpression(rhs) || t.isLogicalExpression(rhs)) {
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// UnaryExpression ////////////
+    } else if (t.isUnaryExpression(rhs)) {
+      // for UnaryExpression, essentially we can throw away the operator
+      // and assign the taint to be that of its argument
+      let rhsTaint = getTaint(rhs.argument, path);
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
   }
 
