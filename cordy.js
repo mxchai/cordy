@@ -96,9 +96,15 @@ module.exports = function(babel) {
     } else if (t.isBinaryExpression(node) || t.isLogicalExpression(node)) {
       return chainBinaryExprVar(node, path);
 
-      ////////////////// Return untainted otherwise //////////////////
+      ///////////////////// isArrayExpression ////////////////////
+    } else if (t.isArrayExpression(node)) {
+      let arrElements = node.elements;
+      let rhsTaint = chainBinaryOr(arrElements, path);
+      return rhsTaint;
+
+      ///////////////////// Return untainted otherwise ////////////////////
     } else {
-        return 0;
+      return t.numericLiteral(0);
     }
   }
 
@@ -183,8 +189,7 @@ module.exports = function(babel) {
 
       //////////// ArrayExpression ////////////
     } else if (t.isArrayExpression(rhs)) {
-      let arrElements = rhs.elements;
-      let rhsTaint = chainBinaryOr(arrElements, path);
+      let rhsTaint = getTaint(rhs, path)
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// ObjectExpression ////////////
