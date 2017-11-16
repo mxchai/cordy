@@ -319,6 +319,15 @@ module.exports = function(babel) {
     path.unshiftContainer('body', taintDeclaration);
   }
 
+  function instrumentExpressionStatement(path) {
+    if (t.isCallExpression(path.node.expression)) {
+      console.log('isCallExpression');
+    } else if (t.isAssignmentExpression(path.node.expression)) {
+      console.log('isAssignmentExpression');
+    }
+
+  }
+
   //////////// Visitor pattern for instrumentation ////////////
   return {
     visitor: {
@@ -337,6 +346,10 @@ module.exports = function(babel) {
       ReturnStatement: function(path) {
         if (path.node.isClean) { return; }
         instrumentReturnStatement(path);
+      },
+      ExpressionStatement: function(path) {
+        if (path.node.isClean) { return; }
+        instrumentExpressionStatement(path);
       }
     }
   };
