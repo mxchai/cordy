@@ -3,6 +3,7 @@ module.exports = function(babel) {
   var t = babel.types;
   var scope = "";
   var lhsScope = "";
+  var anonymousCount = 0;
 
   function handleExpression(expression) {
     return 0;
@@ -321,7 +322,28 @@ module.exports = function(babel) {
 
   function instrumentExpressionStatement(path) {
     if (t.isCallExpression(path.node.expression)) {
-      console.log('isCallExpression');
+      let newArgList = []
+      let args = path.node.expression.arguments;
+      for (index in args) {
+        let node = args[index];
+        if (t.isFunctionExpression(node)) {
+          let fnId = t.identifier(`cordyAnonymous${anonymousCount}`);
+          anonymousCount++;
+          let fnParams = node.params;
+          let fnBody = node.body;
+          let fnDeclaration = t.FunctionDeclaration(
+            fnId,
+            fnParams,
+            fnBody
+          );
+          path.insertAfter(fnDeclaration);
+          newArgList.push(fnId);
+        } else {
+          newArgList.push(node);
+        }
+      }
+      path.node.expression.arguments = newArgList;
+
     } else if (t.isAssignmentExpression(path.node.expression)) {
       let node = path.node.expression;
       // Assumption: LHS is always an Identifier

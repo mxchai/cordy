@@ -49,3 +49,11 @@ function hey2(a) {
 function hey3(a,b) {
   return a+b+hey(a,b);
 }
+
+function createFile2() {
+  window.requestFileSystem(a, b, function(){
+    var a = 1 + 2
+  }, function() {
+    console.log('b');
+  });
+}
