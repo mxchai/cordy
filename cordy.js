@@ -18,7 +18,9 @@ module.exports = function(babel) {
    * @return {type}             description
    */
   function chainBinaryOr(arrElements, path) {
-    if (arrElements.length == 1) {
+    if (arrElements.length == 0) {
+      return t.numericLiteral(0);
+    } else if (arrElements.length == 1) {
       return getTaint(arrElements[0], path);
     } else {
       return t.BinaryExpression(
@@ -220,6 +222,11 @@ module.exports = function(babel) {
       // for UnaryExpression, essentially we can throw away the operator
       // and assign the taint to be that of its argument
       let rhsTaint = getTaint(rhs.argument, path);
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// New Expression ////////////
+    } else if (t.isNewExpression(rhs)) {
+      let rhsTaint = chainBinaryOr(rhs.arguments, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
   }
