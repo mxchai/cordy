@@ -18,7 +18,9 @@ module.exports = function(babel) {
    * @return {type}             description
    */
   function chainBinaryOr(arrElements, path) {
-    if (arrElements.length == 1) {
+    if (arrElements.length == 0) {
+      return t.numericLiteral(0);
+    } else if (arrElements.length == 1) {
       return getTaint(arrElements[0], path);
     } else {
       return t.BinaryExpression(
@@ -37,6 +39,7 @@ module.exports = function(babel) {
    * @return {type}      taint expression of node
    */
   function getTaint(node, path) {
+    //////////////////////// isIdentifier /////////////////////////
     if (t.isIdentifier(node)) {
       let hasOwnBinding = path.scope.hasOwnBinding(node.name);
       let hasBinding = path.scope.hasBinding(node.name);
@@ -64,8 +67,12 @@ module.exports = function(babel) {
         t.identifier(node.name)
       );
       return tmExpression;
+
+      ///////////////////////// isLiteral //////////////////////////
     } else if (t.isLiteral(node)) {
       return t.numericLiteral(0);
+
+      ////////////////////// isCallExpression /////////////////////
     } else if (t.isCallExpression(node)) {
       let tmId = t.identifier("taint.fn");
       let rhsTaint = t.MemberExpression(
@@ -73,6 +80,8 @@ module.exports = function(babel) {
         t.identifier(node.callee.name)
       );
       return rhsTaint
+
+      //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
       let name = node.object.name;
       let tmId = t.identifier("taint");
@@ -81,14 +90,19 @@ module.exports = function(babel) {
         t.identifier(name)
       );
       return rhsTaint;
+
+      ///////////////////// isBinaryExpression ////////////////////
     } else if (t.isBinaryExpression(node) || t.isLogicalExpression(node)) {
       return chainBinaryExprVar(node, path);
+
+      ///////////////////// isArrayExpression ////////////////////
     } else if (t.isArrayExpression(node)) {
       let arrElements = node.elements;
       let rhsTaint = chainBinaryOr(arrElements, path);
       return rhsTaint;
+
+      ///////////////////// Return untainted otherwise ////////////////////
     } else {
-      // Return taint of 0 if Expression is uncaught
       return t.numericLiteral(0);
     }
   }
@@ -214,6 +228,11 @@ module.exports = function(babel) {
       // and assign the taint to be that of its argument
       let rhsTaint = getTaint(rhs.argument, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
+
+      //////////// New Expression ////////////
+    } else if (t.isNewExpression(rhs)) {
+      let rhsTaint = chainBinaryOr(rhs.arguments, path);
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
     }
   }
 
@@ -301,6 +320,25 @@ module.exports = function(babel) {
       [retVarDeclarator]
     )
     path.insertBefore(retVarDeclaration);
+
+    let fnName = path.parentPath.parent.id.name;
+    let lExpression = t.MemberExpression(
+      t.identifier('taint.fn'),
+      t.identifier(fnName)
+    );
+    let rExpression = t.MemberExpression(
+      t.identifier(`taint.${fnName}`),
+      t.identifier('__retVal')
+    );
+    let fnTaint = t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        lExpression,
+        rExpression
+      )
+    )
+    fnTaint.isClean = true;
+    path.insertBefore(fnTaint);
 
     let retStmt = t.returnStatement(
       t.identifier('__retVal')

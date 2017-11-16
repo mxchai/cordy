@@ -57,3 +57,6 @@ function createFile2() {
     console.log('b');
   });
 }
+
+var a = new Hello();
+var b = new Bye(1, x);
