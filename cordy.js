@@ -272,7 +272,11 @@ module.exports = function(babel) {
   function isDocumentGetElementById(node) {
     let memExprObject = node.object;
     let memExprProperty = node.property;
-    return memExprObject.name === 'document' && memExprProperty.name === 'getElementById';
+    if (memExprObject && memExprProperty) {
+      return memExprObject.name === 'document' && memExprProperty.name === 'getElementById';
+    } else {
+      return false;
+    }
   }
 
   function instrumentVariableDeclaration(path) {
