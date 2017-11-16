@@ -84,14 +84,21 @@ module.exports = function(babel) {
 
       //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
-      let name = node.object.name;
-      let tmId = t.identifier("taint");
-      let rhsTaint = t.MemberExpression(
-        tmId,
-        t.identifier(name)
-      );
-      return rhsTaint;
-
+      if (t.isCallExpression(node.object) && node.property.name === 'value' && node.object.callee.object.name == 'document' && node.object.callee.property.name === 'getElementById') {
+          // this clause is trying to start taint when it sees  var = document.getElementById('id').value;
+          // TODO right now, it immediately assign taint of var to 1 if var = document.getElementById('id').value
+          // it doesnt check that id refer to a input field that user input
+          // and refactor this crappy ugly code
+          return t.numericLiteral(1);
+      } else {
+          let name = node.object.name;
+          let tmId = t.identifier("taint");
+          let rhsTaint = t.MemberExpression(
+            tmId,
+            t.identifier(name)
+          );
+          return rhsTaint;
+      }
       ///////////////////// isBinaryExpression ////////////////////
     } else if (t.isBinaryExpression(node) || t.isLogicalExpression(node)) {
       return chainBinaryExprVar(node, path);
@@ -205,23 +212,25 @@ module.exports = function(babel) {
 
       //////////// CallExpression ////////////
     } else if (t.isCallExpression(rhs)) {
-      if (isDocumentGetElementById(rhs.callee)) {
-        let docSource = rhs.arguments[0].value;
-        let isTaintedSource = taintedSources.indexOf(docSource) > -1;
-        let rhsTaint = isTaintedSource ? t.numericLiteral(1) : t.numericLiteral(0);
-        createTaintStatusUpdate(path, lhsName, rhsTaint);
-      } else {
+    //   if (isDocumentGetElementById(rhs.callee)) {
+    //     let docSource = rhs.arguments[0].value;
+    //     let isTaintedSource = taintedSources.indexOf(docSource) > -1;
+    //     let rhsTaint = isTaintedSource ? t.numericLiteral(1) : t.numericLiteral(0);
+    //     createTaintStatusUpdate(path, lhsName, rhsTaint);
+    //   } else {
+
         // Add more arguments to a CallExpress e.g. taint.<arg>
+
         let arrLength = rhs.arguments.length;
         for (let i = 0; i < arrLength; i++) {
           rhs.arguments.push(getTaint(rhs.arguments[i], path));
         }
         let rhsTaint = getTaint(rhs, path);
         createTaintStatusUpdate(path, lhsName, rhsTaint);
-      }
+    //   }
 
       //////////// MemberExpression ////////////
-    } else if (t.isMemberExpression(rhs)) {
+  } else if (t.isMemberExpression(rhs)) {
       let rhsTaint = getTaint(rhs, path);
       createTaintStatusUpdate(path, lhsName, rhsTaint);
 
