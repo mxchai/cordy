@@ -41,6 +41,8 @@ getTaint(LHS) = getTaint
 ```
 Iterate though each Property of the ObjectExpression, then `OR` their taint together, much like ArrayExpression.
 
+TODO: this assumption does not hold when the Javascript Object has functions in them. It is not enough to treat each property simply as a Literal (which we have done in the code)
+
 ### FunctionExpression
 Apparently this appears when you declare a function callback within another function. Need to think of how to handle this, and the callback case (which will probably get very thorny...)
 
