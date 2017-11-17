@@ -5,7 +5,7 @@ module.exports = function(babel) {
   var lhsScope = "";
   var anonymousCount = 0;
   var taintedSources = ['textBox1'];
-  var sinks = ["write", "writer.write.foo.bar", "writer.write"];
+  var sinks = ["write", "fileWriter.write", "writer.write"];
 
   function handleExpression(expression) {
     return 0;
@@ -420,6 +420,8 @@ module.exports = function(babel) {
 
   function createCheckTaintCall(path, exprArgs) {
     let exprArgTaint = exprArgs.map(arg => getTaint(arg, path));
+    let lineNum = t.numericLiteral(exprArgs[0].loc.start.line);
+    exprArgTaint.unshift(lineNum);
     let expr = t.expressionStatement(
       t.callExpression(
         t.identifier("checkTaint"),
