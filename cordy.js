@@ -419,10 +419,11 @@ module.exports = function(babel) {
   }
 
   function createCheckTaintCall(path, exprArgs) {
+    let exprArgTaint = exprArgs.map(arg => getTaint(arg, path));
     let expr = t.expressionStatement(
       t.callExpression(
         t.identifier("checkTaint"),
-        exprArgs
+        exprArgTaint
       )
     );
     expr.isClean = true;
