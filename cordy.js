@@ -5,6 +5,7 @@ module.exports = function(babel) {
   var lhsScope = "";
   var anonymousCount = 0;
   var taintedSources = ['textBox1'];
+  var sinks = ["write", "writer.write.foo.bar", "writer.write"];
 
   function handleExpression(expression) {
     return 0;
@@ -84,7 +85,7 @@ module.exports = function(babel) {
 
       //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
-      if (t.isCallExpression(node.object) && node.property.name === 'value' && node.object.callee.object.name == 'document' && node.object.callee.property.name === 'getElementById') {
+      if (t.isCallExpression(node.object) && node.property.name === 'value' && node.object.callee.object.name === 'document' && node.object.callee.property.name === 'getElementById') {
           // this clause is trying to start taint when it sees  var = document.getElementById('id').value;
           // TODO right now, it immediately assign taint of var to 1 if var = document.getElementById('id').value
           // it doesnt check that id refer to a input field that user input
@@ -406,30 +407,81 @@ module.exports = function(babel) {
     path.unshiftContainer('body', taintDeclaration);
   }
 
+  function isSink(callee) {
+    for (index in sinks) {
+      if(t.isMemberExpression(callee) && matchMemberExpression(sinks[index], callee)) {
+        return true;
+      } else if (t.isIdentifier(callee) && callee.name === sinks[index]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function createCheckTaintCall(path, exprArgs) {
+    let expr = t.expressionStatement(
+      t.callExpression(
+        t.identifier("checkTaint"),
+        exprArgs
+      )
+    );
+    expr.isClean = true;
+    path.insertBefore(expr);
+  }
+
+/**
+ * Match a MemberExpression node against a name.
+ * @param  {String} name Name of the expected member expression (e.g. `foo.bar`)
+ * @param  {Object} node Esprima node
+ * @return {Boolean}     Does the node match the name
+ */
+function matchMemberExpression(name, node) {
+  var nameParts = name.split('.');
+
+  if (node.type !== 'MemberExpression' || node.property.name !== nameParts[nameParts.length - 1]) {
+    return false;
+  }
+
+  function match(node, index) {
+    if (node.type === 'MemberExpression') {
+      if (node.property.name !== nameParts[index]) return false;
+      return match(node.object, --index);
+    }
+    if (node.type === 'Identifier' && node.name === nameParts[index] && index === 0) {
+      return true;
+    }
+  }
+
+  return match(node.object, nameParts.length - 2);
+};
+
   function instrumentExpressionStatement(path) {
     if (t.isCallExpression(path.node.expression)) {
-      let newArgList = []
-      let args = path.node.expression.arguments;
-      for (index in args) {
-        let node = args[index];
-        if (t.isFunctionExpression(node)) {
-          let fnId = t.identifier(`cordyAnonymous${anonymousCount}`);
-          anonymousCount++;
-          let fnParams = node.params;
-          let fnBody = node.body;
-          let fnDeclaration = t.FunctionDeclaration(
-            fnId,
-            fnParams,
-            fnBody
-          );
-          path.insertAfter(fnDeclaration);
-          newArgList.push(fnId);
-        } else {
-          newArgList.push(node);
+      if (isSink(path.node.expression.callee)) {
+        createCheckTaintCall(path, path.node.expression.arguments)
+      } else {
+        let newArgList = []
+        let args = path.node.expression.arguments;
+        for (index in args) {
+          let node = args[index];
+          if (t.isFunctionExpression(node)) {
+            let fnId = t.identifier(`cordyAnonymous${anonymousCount}`);
+            anonymousCount++;
+            let fnParams = node.params;
+            let fnBody = node.body;
+            let fnDeclaration = t.FunctionDeclaration(
+              fnId,
+              fnParams,
+              fnBody
+            );
+            path.insertAfter(fnDeclaration);
+            newArgList.push(fnId);
+          } else {
+            newArgList.push(node);
+          }
         }
+        path.node.expression.arguments = newArgList;
       }
-      path.node.expression.arguments = newArgList;
-
     } else if (t.isAssignmentExpression(path.node.expression)) {
       let node = path.node.expression;
       // Assumption: LHS is always an Identifier
