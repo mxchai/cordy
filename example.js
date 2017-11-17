@@ -61,4 +61,4 @@ function createFile2() {
 var a = new Hello();
 var b = new Bye(1, x);
 
-var a = document.getElementById('hello');
+var a = document.getElementById('hello').value;
