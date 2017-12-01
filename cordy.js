@@ -5,9 +5,8 @@ module.exports = function(babel) {
   var scope = "";
   var lhsScope = "";
   var anonymousCount = 0;
-  var taintedSources = ['textBox1'];
-  var sourceIds = ["write-to-file", "create-file"];
-  var sources = ["document.getElementById", "get", "document.get.getSth"];
+  var sourceIds = ["write-to-file", "create-file"]; //TODO get Ids from HTML parser
+  var sourceFxns = ["document.getElementById", "get", "document.get.getSth"];
   var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
 
   function handleExpression(expression) {
@@ -212,22 +211,12 @@ module.exports = function(babel) {
 
       //////////// CallExpression ////////////
     } else if (t.isCallExpression(rhs)) {
-    //   if (isDocumentGetElementById(rhs.callee)) {
-    //     let docSource = rhs.arguments[0].value;
-    //     let isTaintedSource = taintedSources.indexOf(docSource) > -1;
-    //     let rhsTaint = isTaintedSource ? t.numericLiteral(1) : t.numericLiteral(0);
-    //     createTaintStatusUpdate(path, lhsName, rhsTaint);
-    //   } else {
-
-        // Add more arguments to a CallExpress e.g. taint.<arg>
-
-        let arrLength = rhs.arguments.length;
-        for (let i = 0; i < arrLength; i++) {
-          rhs.arguments.push(getTaint(rhs.arguments[i], path));
-        }
-        let rhsTaint = getTaint(rhs, path);
-        createTaintStatusUpdate(path, lhsName, rhsTaint);
-    //   }
+      let arrLength = rhs.arguments.length;
+      for (let i = 0; i < arrLength; i++) {
+        rhs.arguments.push(getTaint(rhs.arguments[i], path));
+      }
+      let rhsTaint = getTaint(rhs, path);
+      createTaintStatusUpdate(path, lhsName, rhsTaint);
 
       //////////// MemberExpression ////////////
   } else if (t.isMemberExpression(rhs)) {
@@ -270,22 +259,6 @@ module.exports = function(babel) {
       }
     }
     return false;
-  }
-
-  /**
-   * isDocumentGetElementById
-   *
-   * @param  {AST MemberExpression} node
-   * @return {Boolean}                Result of check
-   */
-  function isDocumentGetElementById(node) {
-    let memExprObject = node.object;
-    let memExprProperty = node.property;
-    if (memExprObject && memExprProperty) {
-      return memExprObject.name === 'document' && memExprProperty.name === 'getElementById';
-    } else {
-      return false;
-    }
   }
 
   function instrumentVariableDeclaration(path) {
@@ -409,7 +382,7 @@ module.exports = function(babel) {
   /**
    * Check if node is of form x.("id").y
    * 1. y is value or innerHTML
-   * 2. x is in sources array
+   * 2. x is in sourceFxns array
    *
    * @param  {Object} node Esprima node
    * @return {Boolean}     Whether node is a match expression above
@@ -418,7 +391,7 @@ module.exports = function(babel) {
     // Note: currently check consists of these parts
     // 1. check if node.object is callExpression
     // 2. check if *.value or *.innerHTML
-    // 3. check if * is inside sources array
+    // 3. check if * is inside sourceFxns array
 
     if (!t.isCallExpression(node.object)) {
       return false;
@@ -429,10 +402,10 @@ module.exports = function(babel) {
     }
 
     var callee = node.object.callee;
-    for(index in sources) {
-      if(t.isMemberExpression(callee) && matchMemberExpression(sources[index], callee)) {
+    for(index in sourceFxns) {
+      if(t.isMemberExpression(callee) && matchMemberExpression(sourceFxns[index], callee)) {
         return true;
-      } else if (t.isIdentifier(callee) && callee.name === sources[index]) {
+      } else if (t.isIdentifier(callee) && callee.name === sourceFxns[index]) {
         return true;
       }
     }
@@ -442,6 +415,7 @@ module.exports = function(babel) {
   /**
    *  getSourceIdTaint - returns taint value of node
    *  Requires node to be source expression (isSourceExpression)
+   *  Assumption: assumes all args are literals
    *  Returns 1 if at least one arguments is an id in sourceIds, otherwise 0 is returned
    *  sourceIds is a list of ids returned by the HTML parser
    * @param  {Object} node Esprima node
