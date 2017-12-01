@@ -3,27 +3,48 @@ var htmlParser = require('parse5');
 
 // This parser will return a list of ids of DOM elements that accept user inputs
 
-var name = process.argv[2];
-fs.readFile(name, 'utf8', function (err,data) {
-	if (err) {
-		return console.log(err);
+module.exports = function (htmlFileName) {
+	var data = fs.readFileSync(htmlFileName, 'utf-8');
+
+	// There should only be one HTML node
+	var htmlNode = getNodes('html', htmlParser.parse(data).childNodes)[0];
+	var bodyNode = getNodes('body', htmlNode.childNodes)[0];
+
+	var listOfFormNodes = [].concat.apply([],DFS_formNodes(bodyNode, []));
+	var listOfVulnerableDomIds = [];
+
+	for (var index in listOfFormNodes) {
+		var formNode = listOfFormNodes[index];
+		var listOfInputIds = getVulnerableInputIds(formNode);
+		var listOfTextAreaIds = getVulnerableTextAreaIds(formNode);
+		listOfVulnerableDomIds = listOfVulnerableDomIds.concat(listOfInputIds.concat(listOfTextAreaIds));
 	}
 
-  // There should only be one HTML node
-  var htmlNode = getNodes('html', htmlParser.parse(data).childNodes)[0];
-  var bodyNode = getNodes('body', htmlNode.childNodes)[0];
+	return listOfVulnerableDomIds;
+}
 
-  var listOfFormNodes = [].concat.apply([],DFS_formNodes(bodyNode, []));
-  var listOfVulnerableDomIds = [];
-
-  for (var index in listOfFormNodes) {
-    var formNode = listOfFormNodes[index];
-    var listOfInputIds = getVulnerableInputIds(formNode);
-    var listOfTextAreaIds = getVulnerableTextAreaIds(formNode);
-    listOfVulnerableDomIds = listOfVulnerableDomIds.concat(listOfInputIds.concat(listOfTextAreaIds));
-  }
-  console.log(listOfVulnerableDomIds);
-});
+// ============For testing================
+// var name = process.argv[2];
+// fs.readFile(name, 'utf8', function (err,data) {
+// 	if (err) {
+// 		return console.log(err);
+// 	}
+//
+//   // There should only be one HTML node
+//   var htmlNode = getNodes('html', htmlParser.parse(data).childNodes)[0];
+//   var bodyNode = getNodes('body', htmlNode.childNodes)[0];
+//
+//   var listOfFormNodes = [].concat.apply([],DFS_formNodes(bodyNode, []));
+//   var listOfVulnerableDomIds = [];
+//
+//   for (var index in listOfFormNodes) {
+//     var formNode = listOfFormNodes[index];
+//     var listOfInputIds = getVulnerableInputIds(formNode);
+//     var listOfTextAreaIds = getVulnerableTextAreaIds(formNode);
+//     listOfVulnerableDomIds = listOfVulnerableDomIds.concat(listOfInputIds.concat(listOfTextAreaIds));
+//   }
+//   console.log(listOfVulnerableDomIds);
+// });
 
 function DFS_formNodes(node, accum) {
   if (node.childNodes.length === 0) {
