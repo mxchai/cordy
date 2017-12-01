@@ -5,7 +5,8 @@ module.exports = function(babel) {
   var lhsScope = "";
   var anonymousCount = 0;
   var taintedSources = ['textBox1'];
-  var sinks = ["write", "fileWriter.write", "writer.write"];
+  var sources = ["document.getElementById", "get", "document.get.getSth"];
+  var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
 
   function handleExpression(expression) {
     return 0;
@@ -86,6 +87,7 @@ module.exports = function(babel) {
       //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
       if (isSource(node)) {
+          // start taint when node is source;
           return t.numericLiteral(1);
       } else {
           let name = node.object.name;
@@ -403,15 +405,35 @@ module.exports = function(babel) {
     path.unshiftContainer('body', taintDeclaration);
   }
 
+  /**
+   * Check if node is a source
+   * @param  {Object} node Esprima node
+   * @return {Boolean}     Whether node is a source
+   */
   function isSource(node) {
-    // this clause is trying to start taint when it sees  var = document.getElementById('id').value;
-    // TODO right now, it immediately assign taint of var to 1 if var = document.getElementById('id').value
-    // it doesnt check that id refer to a input field that user input
-    // and refactor this crappy ugly code
+    // Note: currently check consists of these parts
+    // 1. check if node.object is callExpression
+    // 2. check if *.value or *.innerHTML
+    // 3. check if * is inside sources array
+    // 4. TODO: check that id refer to a input field
 
-    if (t.isCallExpression(node.object) && node.property.name === 'value' && node.object.callee.object.name === 'document' && node.object.callee.property.name === 'getElementById') {
-      return true;
+    if (!t.isCallExpression(node.object)) {
+      return false;
     }
+
+    if (node.property.name !== 'value' && node.property.name !== 'innerHTML') {
+      return false;
+    }
+
+    var callee = node.object.callee;
+    for(index in sources) {
+      if(t.isMemberExpression(callee) && matchMemberExpression(sources[index], callee)) {
+        return true;
+      } else if (t.isIdentifier(callee) && callee.name === sources[index]) {
+        return true;
+      }
+    }
+
     return false;
   }
 

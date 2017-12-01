@@ -17,7 +17,7 @@ fs.readFile(inputFile, 'utf-8', function(err, data) {
     plugins: [cordy]
   });
 
-  console.log(checkTaintSrc.toString() + out.code);
+  // console.log(checkTaintSrc.toString() + out.code);
   out.code = checkTaintSrc.toString() + out.code;
   fs.writeFile(outputFile, out.code, function(err, data) {
     if (err) {
