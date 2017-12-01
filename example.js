@@ -62,3 +62,7 @@ var a = new Hello();
 var b = new Bye(1, x);
 
 var a = document.getElementById('hello').value;
+
+var contentsToWrite = document.getElementById("write-to-file").value;
+var blob = new Blob([contentsToWrite], {type: 'text/plain'});
+fileWriter.write(blob);
