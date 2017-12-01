@@ -15,7 +15,9 @@
     "url": "https://github.com/mxchai/cordy/issues"
   },
   "homepage": "https://github.com/mxchai/cordy#readme",
-  "dependencies": {},
+  "dependencies": {
+    "parse5": "^3.0.3"
+  },
   "devDependencies": {
     "babel-core": "^6.26.0"
   },
