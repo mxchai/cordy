@@ -7,7 +7,6 @@ module.exports = function(babel) {
   var lhsScope = "";
   var anonymousCount = 0;
   var sourceIds = run.sourceIds;
-  console.log(sourceIds);
   var sourceFxns = ["document.getElementById", "get", "document.get.getSth"];
   var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
 
