@@ -5,6 +5,7 @@ module.exports = function(babel) {
   var lhsScope = "";
   var anonymousCount = 0;
   var taintedSources = ['textBox1'];
+  var sourceIds = ["write-to-file", "some_id"];
   var sources = ["document.getElementById", "get", "document.get.getSth"];
   var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
 
@@ -86,8 +87,7 @@ module.exports = function(babel) {
 
       //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
-      if (isSource(node)) {
-          // start taint when node is source;
+      if (isSourceExpression(node)) {
           return t.numericLiteral(1);
       } else {
           let name = node.object.name;
@@ -406,11 +406,12 @@ module.exports = function(babel) {
   }
 
   /**
-   * Check if node is a source
+   * Check if node is of form x.("id").y
+   *
    * @param  {Object} node Esprima node
    * @return {Boolean}     Whether node is a source
    */
-  function isSource(node) {
+  function isSourceExpression(node) {
     // Note: currently check consists of these parts
     // 1. check if node.object is callExpression
     // 2. check if *.value or *.innerHTML
@@ -433,7 +434,20 @@ module.exports = function(babel) {
         return true;
       }
     }
+    return false;
+  }
 
+  function containSourceIds(node) {
+    if (!t.isCallExpression(node.object)) {
+      return false;
+    }
+
+    var args = node.object.arguments;
+    for(index in args) {
+      if (sourceIds.indexOf(args[index].value) > -1) {
+        return true;
+      }
+    }
     return false;
   }
 
