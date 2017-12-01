@@ -1,11 +1,12 @@
 //////////// cordy Babel plugin ////////////
 module.exports = function(babel) {
+  var assert = require('assert');
   var t = babel.types;
   var scope = "";
   var lhsScope = "";
   var anonymousCount = 0;
   var taintedSources = ['textBox1'];
-  var sourceIds = ["write-to-file", "some_id"];
+  var sourceIds = ["write-to-file", "create-file"];
   var sources = ["document.getElementById", "get", "document.get.getSth"];
   var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
 
@@ -88,7 +89,7 @@ module.exports = function(babel) {
       //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
       if (isSourceExpression(node)) {
-          return t.numericLiteral(1);
+        return getSourceIdTaint(node);
       } else {
           let name = node.object.name;
           let tmId = t.identifier("taint");
@@ -407,16 +408,17 @@ module.exports = function(babel) {
 
   /**
    * Check if node is of form x.("id").y
+   * 1. y is value or innerHTML
+   * 2. x is in sources array
    *
    * @param  {Object} node Esprima node
-   * @return {Boolean}     Whether node is a source
+   * @return {Boolean}     Whether node is a match expression above
    */
   function isSourceExpression(node) {
     // Note: currently check consists of these parts
     // 1. check if node.object is callExpression
     // 2. check if *.value or *.innerHTML
     // 3. check if * is inside sources array
-    // 4. TODO: check that id refer to a input field
 
     if (!t.isCallExpression(node.object)) {
       return false;
@@ -437,18 +439,24 @@ module.exports = function(babel) {
     return false;
   }
 
-  function containSourceIds(node) {
-    if (!t.isCallExpression(node.object)) {
-      return false;
-    }
+  /**
+   *  getSourceIdTaint - returns taint value of node
+   *  Requires node to be source expression (isSourceExpression)
+   *  Returns 1 if at least one arguments is an id in sourceIds, otherwise 0 is returned
+   *  sourceIds is a list of ids returned by the HTML parser
+   * @param  {Object} node Esprima node
+   * @return {Boolean}     taint of node
+   */
+  function getSourceIdTaint(node) {
+    assert(isSourceExpression(node));
 
     var args = node.object.arguments;
     for(index in args) {
       if (sourceIds.indexOf(args[index].value) > -1) {
-        return true;
+        return t.numericLiteral(1);
       }
     }
-    return false;
+    return t.numericLiteral(0);
   }
 
   function isSink(callee) {
