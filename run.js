@@ -2,10 +2,15 @@
 var fs = require('fs');
 var babel = require('babel-core');
 var cordy = require('./cordy');
+var getSourceIds = require('./htmlParser.js');
 
 var inputFile = process.argv[2];
 var outputFile = 'output.js'
 var checkTaintFile = 'checkTaint.js';
+
+module.exports = {
+    sourceIds: getSourceIds(process.argv[3])
+};
 
 var checkTaintSrc = fs.readFileSync(checkTaintFile, 'utf-8');
 // console.log(checkTaintSrc.toString());

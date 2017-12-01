@@ -1,12 +1,12 @@
 //////////// cordy Babel plugin ////////////
 module.exports = function(babel) {
   var assert = require('assert');
-  var getSourceIds = require('./htmlParser.js');
+  var run = require('./run.js');
   var t = babel.types;
   var scope = "";
   var lhsScope = "";
   var anonymousCount = 0;
-  var sourceIds = getSourceIds("sampleApp.html");
+  var sourceIds = run.sourceIds;
   console.log(sourceIds);
   var sourceFxns = ["document.getElementById", "get", "document.get.getSth"];
   var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
