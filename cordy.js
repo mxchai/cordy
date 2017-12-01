@@ -85,11 +85,7 @@ module.exports = function(babel) {
 
       //////////////////// isMemberExpression //////////////////////
     } else if (t.isMemberExpression(node)) {
-      if (t.isCallExpression(node.object) && node.property.name === 'value' && node.object.callee.object.name === 'document' && node.object.callee.property.name === 'getElementById') {
-          // this clause is trying to start taint when it sees  var = document.getElementById('id').value;
-          // TODO right now, it immediately assign taint of var to 1 if var = document.getElementById('id').value
-          // it doesnt check that id refer to a input field that user input
-          // and refactor this crappy ugly code
+      if (isSource(node)) {
           return t.numericLiteral(1);
       } else {
           let name = node.object.name;
@@ -405,6 +401,18 @@ module.exports = function(babel) {
     taintFnDeclaration.isClean = true;
     path.unshiftContainer('body', taintFnDeclaration);
     path.unshiftContainer('body', taintDeclaration);
+  }
+
+  function isSource(node) {
+    // this clause is trying to start taint when it sees  var = document.getElementById('id').value;
+    // TODO right now, it immediately assign taint of var to 1 if var = document.getElementById('id').value
+    // it doesnt check that id refer to a input field that user input
+    // and refactor this crappy ugly code
+
+    if (t.isCallExpression(node.object) && node.property.name === 'value' && node.object.callee.object.name === 'document' && node.object.callee.property.name === 'getElementById') {
+      return true;
+    }
+    return false;
   }
 
   function isSink(callee) {
