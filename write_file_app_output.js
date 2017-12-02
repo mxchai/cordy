@@ -6,7 +6,7 @@ function checkTaint() {
   }
 
   if (result === 1) {
-    console.log("CORDY WARNING: Line " + lineNum + " might be tainted.");
+    console.log("CORDY WARNING: Line " + lineNum + " of the original JS file might be tainted.");
   }
 }
 var taint = {};

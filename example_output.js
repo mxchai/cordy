@@ -6,7 +6,7 @@ function checkTaint() {
   }
 
   if (result === 1) {
-    console.log("CORDY WARNING: Line " + lineNum + " might be tainted.");
+    console.log("CORDY WARNING: Line " + lineNum + " of the original JS file might be tainted.");
   }
 }
 var taint = {};
@@ -146,7 +146,7 @@ var b = new Bye(1, x);
 taint.b = 0 | taint.x;
 var a = document.getElementById('hello').value;
 
-taint.a = 1;
+taint.a = 0;
 var contentsToWrite = document.getElementById("write-to-file").value;
 taint.contentsToWrite = 1;
 var blob = new Blob([contentsToWrite], { type: 'text/plain' });

@@ -7,13 +7,8 @@ module.exports = function(babel) {
   var lhsScope = "";
   var anonymousCount = 0;
   var sourceIds = run.sourceIds;
-  var sourceFxns = ["document.getElementById", "get", "document.get.getSth"];
-  var sinks = ["write", "fileWriter.write", "writer.write", "fileWriter.hey.write"];
-
-  function handleExpression(expression) {
-    return 0;
-  }
-
+  var sourceFxns = ["document.getElementById"];
+  var sinks = ["fileWriter.write"];
   /**
    * chainBinaryOr - Used in ArrayExpression to generate the
    * taint expression
