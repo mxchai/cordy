@@ -21,7 +21,7 @@ $ node run.js <JS file path> <HTML file path>
 The `<JS file path>` is the Javascript file of the cordova app while `<HTML file path>` is the corresponding its HTML file. After running the command, CorDy will output the instrumented Javascript code in a file named `output.js`.
 
 ## Example
-To run CorDy on our example app, `write-file-app`:
+To run CorDy on our example app, `write-file-app`, type the following command in the root directory of CorDy:
 ```
 $ node run.js ../write-file-app/www/js/index.js ../write-file-app/www/index.html
 ```
